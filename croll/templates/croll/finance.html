@@ -1,0 +1,132 @@
+  {% comment %}
+  totalCnt: <strong>{{ totalCnt }}</strong> current_page: <strong>{{ current_page }}</strong> boardList: <strong>{{ boardList|length }}</strong>
+  {% endcomment %}
+{% load static %}
+
+<!doctype html>
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{% static 'croll/menubar.css' %}">
+
+    </head>
+    <body>
+            <div class="menubar">
+            <ul>
+                <li><a href="">Home</a></li>
+                <li><a href="financewindow" id="financewindow">Finance</a>
+                </li>
+                <li><a href="#">Invest Index</a>
+                    <ul>
+                        <li><a href="pbrwindow" id="pbrwindow">PBR</a></li>
+                        <li><a href="#">PER</a></li>
+                        <li><a href="#">Apps</a></li>
+                        <li><a href="#">Extensions</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Address</a></li>
+            </ul>
+            </div>
+          <table>
+              <tr>
+                  <td><form name=searchf method=post action= "/croll/financeinfo" >{% csrf_token %}
+                      <p align=right>
+                          <input type=text name=companycode size=50  maxlength=50>
+                          <input type=submit value="조회"  >
+                      </p>
+                  </form>
+                  </td>
+              </tr>
+          </table>
+
+           <table cellspacing=1 border=0>
+              <tr>
+                  <td>총 게시물수: {{ totalCnt }}</td>
+                  <td><p align=right> 페이지:{{ current_page }}
+                  </td>
+              </tr>
+          </table>
+
+           <table id="finance" cellspacing=1 border=0>
+               <thread>
+              <tr>
+                  <th width=100><p align=center>회사이름</p></th>
+                  <th width=50><p align=center>코드</p></th>
+                  <th width=50><p align=center>기준년(분기)</p></th>
+                  <th width=50><p align=center>구분</p></th>
+                  <th width=50><p align=center>매출액</p></th>
+                  <th width=50><p align=center>영업이익</p></th>
+                  <th width=50><p align=center>당기순이익</p></th>
+                  <th width=50><p align=center>영업이익률</p></th>
+                  <th width=50><p align=center>순이익률</p></th>
+                  <th width=50><p align=center>ROE(지배주주)</p></th>
+                  <th width=50><p align=center>부채비율</p></th>
+                  <th width=50><p align=center>당좌비율</p></th>
+                  <th width=50><p align=center>유보율</p></th>
+                  <th width=50><p align=center>EPS(원)</p></th>
+                  <th width=50><p align=center>BPS(원)</p></th>
+                  <th width=50><p align=center>주당배당금(원)</p></th>
+                  <th width=50><p align=center>시가배당율(%)</p></th>
+                  <th width=50><p align=center>배당성향(%)</p></th>
+              </tr>
+                </thread>
+               <tbody>
+               {% if boardList %}
+                  <ul>
+                      {% for boardRow in boardList %}
+                      <tr>
+                      <td width=100><p align=center>{{ boardRow.0 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.1 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.2 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.3 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.4 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.5 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.6 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.7 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.8 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.9 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.10 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.11 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.12 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.13 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.14 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.15 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.16 }}</p></td>
+                      <td width=50><p align=center>{{ boardRow.17 }}</p></td>
+                      </tr>
+                      {% endfor %}
+                  </ul>
+              {% else %}
+                  <p>No Data.</p>
+              {% endif %}
+               </tbody>
+          </table>
+
+           <table cellspacing=1 border=0 >
+              <tr> <td>
+                  {% for page in totalPageList %}
+                      <a href="/finance?current_page={{page}}" >
+                      [
+                      {% ifequal page current_page %}
+                          <b>
+                      {% endifequal %}
+                      {{page}}
+
+                       {% ifequal page current_page  %}
+                          </b>
+                      {% endifequal %}
+                      ]
+                  {% endfor %}
+              </td> </tr>
+          </table>
+
+           <table>
+              <tr>
+                  <td><input type=button value="글쓰기"  OnClick="window.location='/show_write_form'">    </td>
+                  <td><form name=searchf method=post action="/searchWithSubject/">
+                      <p align=right><input type=text name=searchStr size=50  maxlength=50>
+                      <input type=submit value="글찾기"></p>
+                  </td>
+              </tr>
+          </table>
+</body>

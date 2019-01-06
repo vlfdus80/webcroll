@@ -1,0 +1,137 @@
+  {% comment %}
+  totalCnt: <strong>{{ totalCnt }}</strong> current_page: <strong>{{ current_page }}</strong> boardList: <strong>{{ boardList|length }}</strong>
+  {% endcomment %}
+{% load static %}
+
+<!doctype html>
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{% static 'croll/menubar.css' %}">
+
+    </head>
+    <body>
+            <div class="menubar">
+            <ul>
+                <li><a href="">Home</a></li>
+                <li><a href="financewindow" id="financewindow">Finance</a>
+                </li>
+                <li><a href="#">Invest Index</a>
+                    <ul>
+                        <li><a href="pbrwindow" id="pbrwindow">PBR</a></li>
+                        <li><a href="#">PER</a></li>
+                        <li><a href="#">Apps</a></li>
+                        <li><a href="#">Extensions</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Address</a></li>
+            </ul>
+            </div>
+
+            <script src="http://code.jquery.com/jquery.min.js"></script>
+            <script type="text/javascript">
+
+             $(function() {
+                $("#pbrbutton").click(function() {
+
+                   var t = document.getElementById("pbrtableid");
+                   var d = t.getElementsByTagName("tr");
+                   for (var i=1;i < d.length;i++){
+                    var e = (d[i].getElementsByTagName("td"))[2];
+                    var y=jQuery.trim(e.innerText);
+                    var codeinput_val = $("#codeinput").val()
+                    if(y==codeinput_val){
+                        var count=100;
+                        $("#pbrtableid tr:eq("+i+") td:eq(0)").focus();
+                        <!--$("#pbrtableid tr:eq(100) td:eq(0)").css('background-color', 'red');-->
+                        }
+                   }
+
+
+                    <!--$("#searchtext").focus();-->
+                }
+                )
+                });
+            </script>
+
+          <table class="pbrtable">
+              <tr>
+                  <td><form name=searchf method=post >{% csrf_token %}
+                      <p align=right>
+                          <input id="codeinput" type=text name=companycode size=50  maxlength=50>
+                          <input id="pbrbutton" type=button value="조회"  >
+                      </p>
+                  </form>
+                  </td>
+              </tr>
+          </table>
+
+           <table class="pbrtable" cellspacing=1 border=0>
+              <tr>
+                  <td>총 게시물수: {{ totalCnt }}</td>
+                  <td><p align=right> 페이지:{{ current_page }}
+                  </td>
+              </tr>
+          </table>
+
+           <table id="pbrtableid" class="pbrtable" cellspacing=1 border=0>
+               <thread>
+              <tr>
+                  <th width=50><p align=center>순위</p></th>
+                  <th width=100><p align=center>회사이름</p></th>
+                  <th width=50><p align=center>코드</p></th>
+                  <th width=50><p align=center>기준년(분기)</p></th>
+                  <th width=50><p align=center>주가</p></th>
+                  <th width=50><p align=center>BPS</p></th>
+                  <th width=50><p align=center>PBR</p></th>
+              </tr>
+                </thread>
+               <tbody>
+               {% if boardList %}
+                  <ul>
+                      {% for boardRow in boardList %}
+                      <tr>
+                      <td tabindex="0" width=50><p align=center>{{ boardRow.0 }}</p></td>
+                      <td tabindex="1" width=100><p align=center>{{ boardRow.1 }}</p></td>
+                      <td tabindex="2" width=50><p align=center>{{ boardRow.2 }}</p></td>
+                      <td tabindex="3" width=50><p align=center>{{ boardRow.3 }}</p></td>
+                      <td tabindex="4" width=50><p align=center>{{ boardRow.4 }}</p></td>
+                      <td tabindex="5" width=50><p align=center>{{ boardRow.5 }}</p></td>
+                      <td tabindex="6" width=50><p align=center>{{ boardRow.6 }}</p></td>
+                      </tr>
+                      {% endfor %}
+                  </ul>
+              {% else %}
+                  <p>No Data.</p>
+              {% endif %}
+               </tbody>
+          </table>
+
+           <!--<table cellspacing=1 border=0 >
+              <tr> <td>
+                  {% for page in totalPageList %}
+                      <a href="/finance?current_page={{page}}" >
+                      [
+                      {% ifequal page current_page %}
+                          <b>
+                      {% endifequal %}
+                      {{page}}
+
+                       {% ifequal page current_page  %}
+                          </b>
+                      {% endifequal %}
+                      ]
+                  {% endfor %}
+              </td> </tr>
+          </table>-->
+
+           <table class="pbrtable">
+              <tr>
+                  <td><input type=button value="글쓰기"  OnClick="window.location='/show_write_form'">    </td>
+                  <td><form name=searchf method=post action="/searchWithSubject/">
+                      <p align=right><input type=text name=searchStr size=50  maxlength=50>
+                      <input id="searchtext" type=submit value="글찾기"></p>
+                  </td>
+              </tr>
+          </table>
+</body>

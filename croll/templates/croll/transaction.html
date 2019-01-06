@@ -1,0 +1,92 @@
+  {% comment %}
+  totalCnt: <strong>{{ totalCnt }}</strong> current_page: <strong>{{ current_page }}</strong> boardList: <strong>{{ boardList|length }}</strong>
+  {% endcomment %}
+{% load static %}
+
+<!doctype html>
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{% static 'croll/menubar.css' %}">
+
+    </head>
+    <body>
+            <div class="menubar">
+            <ul>
+                <li><a href="">Home</a></li>
+                <li><a href="financewindow" id="financewindow">Finance</a>
+                </li>
+                <li><a href="#">Invest Index</a>
+                    <ul>
+                        <li><a href="pbrwindow" id="pbrwindow">PBR</a></li>
+                        <li><a href="#">PER</a></li>
+                        <li><a href="#">Apps</a></li>
+                        <li><a href="#">Extensions</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Address</a></li>
+            </ul>
+            </div>
+
+            <div class="orderdiv"><br/>
+                <label>구분 : </label>
+            <select id='division' name='division' size='1' onchange='fruits_selected()'>
+	        <option value='' selected>-- 선택 --</option>
+	        <option value='1'>매수</option>
+	        <option value='2'>매도</option>
+	        <option value='3'>입고</option>
+            <option value='4'>배당</option>
+            <option value='5'>입금</option>
+            <option value='6'>입출</option>
+            </select><br/><br/><br/>
+            <label>종목코드 : </label><input type=text id='code' size=20  maxlength=50><br/><br/><br/>
+            <label>거래일자 : </label><input type="text" id="transactiondate"><br/><br/>
+
+            <input id="orderbutton" type=button value="등록"  >
+            </div>
+
+            <script src="http://code.jquery.com/jquery.min.js"></script>
+            <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+            <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+            <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+
+            <script type="text/javascript">
+
+                $(function() {
+                    $( "#transactiondate" ).datepicker(
+                        {
+                            dateFormat:'yymmdd'
+                        }
+                    );
+                });
+            </script>
+
+          <!--<table class="pbrtable">-->
+              <!--<tr>-->
+                  <!--<td><form name=searchf method=post >{% csrf_token %}-->
+                      <!--<p align=right>-->
+                          <!--<input id="codeinput" type=text name=companycode size=50  maxlength=50>-->
+                          <!--<input id="pbrbutton" type=button value="조회"  >-->
+                      <!--</p>-->
+                  <!--</form>-->
+                  <!--</td>-->
+              <!--</tr>-->
+          <!--</table>-->
+
+
+
+
+
+
+
+           <!--<table class="pbrtable">-->
+              <!--<tr>-->
+                  <!--<td><input type=button value="글쓰기"  OnClick="window.location='/show_write_form'">    </td>-->
+                  <!--<td><form name=searchf method=post action="/searchWithSubject/">-->
+                      <!--<p align=right><input type=text name=searchStr size=50  maxlength=50>-->
+                      <!--<input id="searchtext" type=submit value="글찾기"></p>-->
+                  <!--</td>-->
+              <!--</tr>-->
+          <!--</table>-->
+</body>
+</html>
