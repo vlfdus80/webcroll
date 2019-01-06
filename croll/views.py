@@ -13,10 +13,12 @@ from croll.pagingHelper import pagingHelper
 from django.shortcuts import render_to_response
 
 
-
+# 집에 있는 PC임
 #print(annual_finance)
 #print(quarter_finance)
+
 def index(request):
+    print("aaa")
     return render_to_response('croll/index.html')
 
 def enteringwindow(request): # finance초기 화면
@@ -25,7 +27,7 @@ def enteringwindow(request): # finance초기 화면
 
 rowsPerPage = 2
 def pbrwindow(request): # finance초기 화면
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = sqlite3.connect("C:/Users/ykd/PycharmProjects/webcroll/db.sqlite3")
     selectsql = '''select row_number() over(order by (p.price+0.00)/(b.bps+0.00)) as num,c.companyname,b.code,b.index_date,p.price,b.bps,(p.price+0.00)/(b.bps+0.00) pbr
                  from (select f.code, f.bps,f.eps, f.index_date from finance f
 		          where f.index_date not like '%(E)'
@@ -71,7 +73,7 @@ order by pbr;'''
 rowsPerPage = 2
 def financewindow(request): # finance초기 화면
     # boardList = DjangoBoard.objects.order_by('-id')[0:2]
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = sqlite3.connect("C:/Users/ykd/PycharmProjects/webcroll/db.sqlite3")
     selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = ? order by division, index_date ; "
     cur = con.cursor()
     cur.execute(selectsql, ('0',))
@@ -91,7 +93,7 @@ def financeinfo(request): # finance화면에서 검색시 호출
     company_code = request.POST['companycode']
     print(company_code)
     print('finance info called')
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = sqlite3.connect("C:/Users/ykd/PycharmProjects/webcroll/db.sqlite3")
     selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = ? order by division, index_date ; "
     cur = con.cursor()
     cur.execute(selectsql, (company_code,))
@@ -145,7 +147,7 @@ def testview(request):
 #
 #     finance_date = annual_date + quarter_date
 #
-#     con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+#     con = sqlite3.connect("C:/Users/ykd/PycharmProjects/webcroll/db.sqlite3")
 #     finance_date_count = 0
 #     division = 'annual'
 #     checkcount=0
@@ -205,6 +207,6 @@ def testview(request):
 #     print(finance)
 #     annual_finance = finance.iloc[:, :4]
 #     quarter_finance = finance.iloc[:, 4:]
-#     con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+#     con = sqlite3.connect("C:/Users/ykd/PycharmProjects/webcroll/db.sqlite3")
 #     finance.to_sql('finance', con)
 #     return HttpResponse('ok')
