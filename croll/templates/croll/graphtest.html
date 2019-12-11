@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>FC-python wrapper</title>
+
+<!-- If you are using downloaded FusionCharts libraries, uncomment the below code   -->
+<!--
+
+	{% load static %}
+   	<script type="text/javascript" src="{% static "fusioncharts/fusioncharts.js" %}"></script>
+   	<script type="text/javascript" src="{% static "fusioncharts/themes/fusioncharts.theme.fusion.js" %}"></script>
+
+-->
+
+   <script type="text/javascript" src="//cdn.fusioncharts.com/fusioncharts/latest/fusioncharts.js"></script>
+   <script type="text/javascript" src="//cdn.fusioncharts.com/fusioncharts/latest/themes/fusioncharts.theme.fusion.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'croll/menubar.css' %}">
+</head>
+    <body>
+            <div class="menubar">
+            <ul>
+                <li><a href="indexwindow">Home</a></li>
+                <li><a href="financewindow" id="financewindow">Finance</a>
+                </li>
+                <li><a href="#">Invest Index</a>
+                    <ul>
+                        <li><a href="pbrwindow" id="pbrwindow">PBR</a></li>
+                        <li><a href="perwindow" id="perwindow">PER</a></li>
+                        <li><a href="graphtest" id="graphtest">Graph</a></li>
+                        <li><a href="#">Extensions</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Order</a>
+                    <ul>
+                        <li><a href="enteringwindow" id="enteringwindow">입고</a></li>
+                        <li><a href="#">AAA</a></li>
+                        <li><a href="#">AAA</a></li>
+                        <li><a href="#">AAA</a></li>
+                    </ul>
+                    </li>
+            </ul>
+            </div>
+    </body>
+    <body style="font-family:'Helvetica Neue', Arial; font-size: 16px;">
+	<h3>{{ chartTitle|safe }}</h3>
+	<div id="chart-1">{{ output|safe }}</div>
+	<div id="chart-2">{{ output_2|safe }}</div>
+	<br/>
+	<a href="/">Back</a>
+    </body>
+</html>

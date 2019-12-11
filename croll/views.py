@@ -11,7 +11,11 @@ import sqlite3
 from django.http import HttpResponseRedirect
 from croll.pagingHelper import pagingHelper
 from django.shortcuts import render_to_response
+import psycopg2
 
+from django.http import HttpResponse
+from collections import OrderedDict
+from .fusioncharts import FusionCharts
 
 # 집에 있는 PC임
 #print(annual_finance)
@@ -27,22 +31,20 @@ def enteringwindow(request): # finance초기 화면
 
 rowsPerPage = 2
 def pbrwindow(request): # finance초기 화면
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
-    selectsql = '''select row_number() over(order by (p.price+0.00)/(b.bps+0.00)) as num,c.companyname,b.code,b.index_date,p.price,b.bps,(p.price+0.00)/(b.bps+0.00) pbr
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+    selectsql = '''select row_number() over(order by ((p.price+0.00)/(b.bps+0.00))) as num,c.companyname,b.code,b.index_date,p.price,b.bps,((p.price+0.00)/(b.bps+0.00))  pbr
                  from (select f.code, f.bps,f.eps, f.index_date from finance f
 		          where f.index_date not like '%(E)'
-		          group by code
-		          having index_date=max(index_date)) b,
-	             (select code,price,max(updatedate) updatedate from price
-		where 1=1
-		group by code, price
-		having updatedate=max(updatedate)
-		order by updatedate desc) p,
-		company c
+			  and f.recent_bungi_check='4'
+                          and f.bps >0 ) b,
+	             (select a.code,a.price,a.updatedate 
+		      from (select code,price, updatedate,row_number() over (partition by code order by updatedate desc) rownum from price) a
+		      where rownum=1) p,
+		     company c
 where 1=1
 and b.code=p.code
 and b.code=c.code
-and pbr > 0
+and ((p.price+0.00)/(b.bps+0.00)) > 0
 order by pbr;'''
     cur = con.cursor()
     cur.execute(selectsql)
@@ -71,10 +73,55 @@ order by pbr;'''
                                                           'current_page':current_page ,'totalPageList':totalPageList} )
 
 rowsPerPage = 2
+def perwindow(request): # finance초기 화면
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+    selectsql = '''select row_number() over(order by (eps > 0) desc,COALESCE((p.price+0.00) / NULLIF((e.eps+0.00),0), 0)) as num,
+                c.companyname,e.code,e.index_date,p.price,e.eps,COALESCE((p.price+0.00) / NULLIF((e.eps+0.00),0), 0) per, eps > 0 plus
+                from (select f.code, sum(f.eps) eps, max(f.index_date) index_date from finance f
+		        where 1=1
+		        and f.index_date not like '%(E)'
+		        and f.recent_bungi_check >'0'
+		        group by code) e,
+	            (select a.code,a.price,a.updatedate 
+		         from (select code,price, updatedate,row_number() over (partition by code order by updatedate desc) rownum from price) a
+		         where rownum=1) p,
+		company c
+where 1=1
+and e.code=p.code
+and e.code=c.code
+--and per > 0
+order by plus desc,per;'''
+    cur = con.cursor()
+    cur.execute(selectsql)
+    boardList = cur.fetchall()
+
+    # 데이터 포맷 변경
+    # boardList_format = []
+    boardList_format = [[0 for j in range(len(boardList[i]))] for i in range(len(boardList))]
+    # print(boardList_format)
+    for i in range(len(boardList)):
+        for j in range(len(boardList[i])):
+            if j in (4,5):
+                boardList_format[i][j] = '{:,}'.format(boardList[i][j])
+            elif j==6:
+                boardList_format[i][j] = '{:,.2f}'.format(boardList[i][j])
+            else:
+                boardList_format[i][j] = boardList[i][j]
+
+    boardList=boardList_format
+    # print(boardList)
+    current_page =1
+    totalCnt = len(boardList)
+    pagingHelperIns = pagingHelper();
+    totalPageList = pagingHelperIns.getTotalPageList( totalCnt, rowsPerPage)
+    return render_to_response('croll/per.html', {'boardList': boardList, 'totalCnt': totalCnt,
+                                                          'current_page':current_page ,'totalPageList':totalPageList} )
+
+rowsPerPage = 2
 def financewindow(request): # finance초기 화면
     # boardList = DjangoBoard.objects.order_by('-id')[0:2]
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
-    selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = ? order by division, index_date ; "
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+    selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = %s order by division, index_date ; "
     cur = con.cursor()
     cur.execute(selectsql, ('0',))
     boardList = cur.fetchall()
@@ -93,8 +140,8 @@ def financeinfo(request): # finance화면에서 검색시 호출
     company_code = request.POST['companycode']
     print(company_code)
     print('finance info called')
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
-    selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = ? order by division, index_date ; "
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+    selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = %s order by division, index_date ; "
     cur = con.cursor()
     cur.execute(selectsql, (company_code,))
     boardList = cur.fetchall()
@@ -147,7 +194,7 @@ def testview(request):
 #
 #     finance_date = annual_date + quarter_date
 #
-#     con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+#     con = sqlite3.connect("D:/03.Study/01.SD/webcroll_sqlite/db.sqlite3")
 #     finance_date_count = 0
 #     division = 'annual'
 #     checkcount=0
@@ -173,40 +220,64 @@ def testview(request):
 #         finance_date_count=finance_date_count+1
 #     return HttpResponse('ok')
 
+def graphtest(request): # graph test window
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+    selectsql = " select company.companyname,finance.* from finance, company where finance.code=company.code and company.code = %s order by division, index_date ; "
+    cur = con.cursor()
+    cur.execute(selectsql, ('0',))
+    boardList = cur.fetchall()
+
+    print(type(boardList))
+    current_page =1
+    totalCnt = len(boardList)
+    pagingHelperIns = pagingHelper();
+    totalPageList = pagingHelperIns.getTotalPageList( totalCnt, rowsPerPage)
+
+    # Chart data is passed to the `dataSource` parameter, as dictionary in the form of key-value pairs.
+    dataSource = OrderedDict()
+
+    # The `chartConfig` dict contains key-value pairs data for chart attribute
+    chartConfig = OrderedDict()
+    chartConfig["caption"] = "Countries With Most Oil Reserves [2017-18]"
+    chartConfig["subCaption"] = "In MMbbl = One Million barrels"
+    chartConfig["xAxisName"] = "Country"
+    chartConfig["yAxisName"] = "Reserves (MMbbl)"
+    chartConfig["numberSuffix"] = "Km"
+    chartConfig["theme"] = "fusion"
+
+    # The `chartData` dict contains key-value pairs data
+    chartData = OrderedDict()
+    chartData["Venezuela"] = 290
+    chartData["Saudi"] = 260
+    chartData["Canada"] = 180
+    chartData["Iran"] = 140
+    chartData["Russia"] = 115
+    chartData["UAE"] = 100
+    chartData["US"] = 30
+    chartData["China"] = 30
+
+    dataSource["chart"] = chartConfig
+    dataSource["data"] = []
+
+    # Convert the data in the `chartData` array into a format that can be consumed by FusionCharts.
+    # The data for the chart should be in an array wherein each element of the array is a JSON object
+    # having the `label` and `value` as keys.
+
+    # Iterate through the data in `chartData` and insert in to the `dataSource['data']` list.
+    for key, value in chartData.items():
+        data = {}
+        data["label"] = key
+        data["value"] = value
+        dataSource["data"].append(data)
+
+    # Create an object for the column 2D chart using the FusionCharts class constructor
+    # The chart data is passed to the `dataSource` parameter.
+    column2D = FusionCharts("column2d", "ex1", "600", "400", "chart-1", "json", dataSource)
 
 
 
+    # return render_to_response('croll/graphtest.html', {'boardList': boardList, 'totalCnt': totalCnt,
+    #                                                       'current_page':current_page ,'totalPageList':totalPageList} )
 
-# def makefinance(request): # 현재 사용안함
-#     URL = "https://finance.naver.com/item/main.nhn?code=005930"
-#     samsung_electronic = requests.get(URL, verify=False)
-#     html = samsung_electronic.text
-#
-#     soup = BeautifulSoup(html, 'html.parser')
-#     finance_html = soup.select('div.section.cop_analysis div.sub_section')[0]
-#     th_data = [item.get_text().strip() for item in finance_html.select('thead th')]
-#     annual_date = th_data[3:7]
-#     quarter_date = th_data[7:13]
-#
-#     finance_index = [item.get_text().strip() for item in finance_html.select('th.h_th2')][3:]
-#     # print(finance_html.select('th.h_th2'))
-#
-#     finance_data = [item.get_text().strip() for item in finance_html.select('td')]
-#
-#     finance_data = np.array(finance_data)
-#
-#     finance_data.resize(len(finance_index), 10)
-#     finance_data_modify = np.full((10,14), '1.111')
-#
-#     for i in range(len(finance_data)):
-#         for j in range(len(finance_data[i])):
-#             finance_data_modify[j][i] = finance_data[i][j]
-#     finance_date = annual_date + quarter_date
-#
-#     finance = pd.DataFrame(data=finance_data_modify[0:, 0:], index=finance_date, columns=finance_index)
-#     print(finance)
-#     annual_finance = finance.iloc[:, :4]
-#     quarter_finance = finance.iloc[:, 4:]
-#     con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
-#     finance.to_sql('finance', con)
-#     return HttpResponse('ok')
+    return render(request, 'croll/graphtest.html', {'output': column2D.render(), 'chartTitle': 'Simple Chart Using Array'})
+

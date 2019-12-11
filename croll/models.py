@@ -4,26 +4,163 @@ from django.http import HttpResponse
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
+import win32com.client
+import pythoncom
+from time import sleep
+import psycopg2
+
+
+class XSession:
+    """
+    classmethod get_instance() 를 사용하여, instance 를 만들어야함.
+    """
+
+    def __init__(self):
+        self.login_state = 0
+
+    def OnLogin(self, code, msg):  # event handler
+        """
+        Login 이 성공적으로 이베스트 서버로 전송된후,
+        로그인 결과에 대한 Login 이벤트 발생시 실행되는 event handler
+        """
+        if code == "0000":
+            print("로그인 ok\n")
+            self.login_state = 1
+        else:
+            self.login_state = 2
+            print("로그인 fail.. \n code={0}, message={1}\n".format(code, msg))
+
+    def api_login(self, id="vlfdus80", pwd="!a571132", cert_pwd="!!a5711327"):  # id, 암호, 공인인증서 암호
+        self.ConnectServer("hts.ebestsec.co.kr", 20001)
+        is_connected = self.Login(id, pwd, cert_pwd, 0, False)  # 로그인 하기
+
+        if not is_connected:  # 서버에 연결 안되거나, 전송 에러시
+            print("로그인 서버 접속 실패... ")
+            return
+        while self.login_state == 0:
+            pythoncom.PumpWaitingMessages()
+
+    def account_info(self):
+        """
+        계좌 정보 조회
+        """
+        if self.login_state != 1:  # 로그인 성공 아니면, 종료
+            return
+
+        account_no = self.GetAccountListCount()
+
+        print("계좌 갯수 = {0}".format(account_no))
+
+        for i in range(account_no):
+            account = self.GetAccountList(i)
+            print("계좌번호 = {0}".format(account))
+
+    @classmethod
+    def get_instance(cls):
+        # DispatchWithEvents로 instance 생성하기
+        xsession = win32com.client.DispatchWithEvents("XA_Session.XASession", cls)
+        return xsession
+
+
+class XQuery_t1101:
+    """
+    classmethod get_instance() 를 사용하여, instance 를 만들어야함.
+    """
+
+    def __init__(self):
+        self.is_data_received = False
+
+    def OnReceiveData(self, tr_code):  # event handler
+        """
+        이베스트 서버에서 ReceiveData 이벤트 받으면 실행되는 event handler
+        """
+        self.is_data_received = True
+        name = self.GetFieldData("t1101OutBlock", "hname", 0)
+        price = self.GetFieldData("t1101OutBlock", "price", 0)
+        volume = self.GetFieldData("t1101OutBlock", "volume", 0)
+        code = self.GetFieldData("t1101OutBlock", "shcode", 0)
+
+        con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+        cur = con.cursor()
+        sql = "insert into price values(%s,%s,current_timestamp);"
+        cur.execute(sql, (code, int(remove_letter(price, ','))))
+
+        cur.execute("commit;")
+        cur.close()
+        con.close()
+
+    def single_request(self, stockcode):
+        self.ResFileName = "C:\\eBEST\\xingAPI\\Res\\t1101.res"  # RES 파일 등록
+        self.SetFieldData("t1101InBlock", "shcode", 0, stockcode)  # 종목코드 설정
+        err_code = self.Request(False)  # data 요청하기 --  연속조회인경우만 True
+        if err_code < 0:
+            print("error... {0}".format(err_code))
+
+    @classmethod
+    def get_instance(cls):
+        print("kkk1")
+        # DispatchWithEvents로 instance 생성하기
+        xq_t1101 = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", cls)
+        print("kkk2")
+        return xq_t1101
+
+
+
 
 # Create your models here.
 def createprice(request):
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
     cur = con.cursor()
-    cur.execute("create table price('code' TEXT, 'price' INTEGER, 'updatedate' DATETIME)")
+    cur.execute("create table price(code varchar(100), price int, updatedate timestamp)")
+    cur.execute("commit;")
+    cur.close()
+    con.close()
     return HttpResponse('ok')
 
 def updateprice(request):
     # company_code='005930'
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+
+    pythoncom.CoInitialize()
+    xsession = XSession.get_instance()
+    xsession.api_login()
+    xsession.account_info()
+    print("request complete")
+
+
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
     selectsql = " select code from company where enable = 'Y'; "
     cur = con.cursor()
     cur.execute(selectsql)
     rows = cur.fetchall()
     for row in rows:
         company_code = row[0]
-        updatepriceone(company_code)
+        updatepriceone_xing(company_code)
         print(company_code)
+    cur.close()
+    con.close()
     return HttpResponse('ok')
+
+def updatepriceone_xing(company_code):
+    pythoncom.CoInitialize()
+    # print("kkk")
+    # xsession = XSession.get_instance()
+    # xsession.api_login()
+    # print("kkk2")
+    # xsession.account_info()
+    # print("------END--")
+
+    def get_single_data():
+        xq_t1101 = XQuery_t1101.get_instance()
+        xq_t1101.single_request(company_code)  # 삼성전자.
+
+        while xq_t1101.is_data_received == False:
+            pythoncom.PumpWaitingMessages()
+    sleep(0.1)
+    get_single_data()
+
+    return HttpResponse('ok')
+
+
 
 def updatepriceone(company_code):
     URL = "https://finance.naver.com/item/sise.nhn?code="+company_code
@@ -38,55 +175,65 @@ def updatepriceone(company_code):
     # print(price_html)
     price=price_html[0].text
 
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = sqlite3.connect("D:/03.Study/01.SD/webcroll_sqlite/db.sqlite3")
     cur = con.cursor()
     sql = ''' insert into price values(?,?,strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime')); '''
     cur.execute(sql, (company_code, int(remove_letter(price,","))))
     cur.execute("commit;")
     return HttpResponse('ok')
 
+
+
+
+
+
 ''' sales : 매출액,business_profit : 영업이익,net_profit : 순이익,business_profit_ratio : 영업이익률,
     net_profit_ratio : 순이익률, ROE : ROE(지배주주),debt_ratio : 부채비율,quick_ratio : 당좌비율,
     reserve_ratio :유보율',bedang :주당배당금(원),bedang_ratio :시가배당율(%),bedang_tendency : 배당성향(%)'''
 def createfinance(request):
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
     sql = ''' CREATE
     TABLE
-    `finance`(
-    'finance_id' integer primary key autoincrement,
-    'code' TEXT,
-    `index_date` TEXT,
-    'division' TEXT,
-    `sales` INTEGER,
-    `business_profit` INTEGER,
-    `net_profit` INTEGER,
-    `business_profit_ratio` REAL,
-    `net_profit_ratio` REAL,
-    `roe` REAL,
-    `debt_ratio` REAL,
-    `quick_ratio` REAL,
-    `reserve_ratio` REAL,
-    `eps` INTEGER,
-    `bps` INTEGER,
-    `bedang` INTEGER,
-    `bedang_ratio` REAL,
-    `bedang_tendency` REAL,
-    'recent_bungi_check' TEXT,
-    `updatedate` DATETIME
+    finance(
+    finance_id serial primary key,
+    code varchar(100),
+    index_date varchar(100),
+    division varchar(100),
+    sales int,
+    business_profit int,
+    net_profit int,
+    business_profit_ratio real,
+    net_profit_ratio real,
+    roe real,
+    debt_ratio real,
+    quick_ratio real,
+    reserve_ratio real,
+    eps int,
+    bps int,
+    bedang int,
+    bedang_ratio real,
+    bedang_tendency real,
+    recent_bungi_check varchar(100),
+    updatedate timestamp
     ); '''
     cur = con.cursor()
     cur.execute(sql)
+    cur.execute("commit;")
+    cur.close()
+    con.close()
     return HttpResponse('ok')
 
 def createcompany(request):
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
     cur = con.cursor()
-    cur.execute("create table company('code' TEXT, 'companyname' TEXT)")
+    cur.execute("create table company(code varchar(100), companyname varchar(100))")
+    cur.close()
+    con.close()
     return HttpResponse('ok')
 
 def updatefinance(request):
     # company_code='005930'
-    con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+    con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
     selectsql = " select code from company where enable = 'Y'; "
     cur = con.cursor()
     cur.execute(selectsql)
@@ -96,6 +243,8 @@ def updatefinance(request):
         updatefinanceone(company_code)
         print(company_code)
 
+    cur.close()
+    con.close()
     return HttpResponse('ok')
 
 def updatefinanceone(company_code):
@@ -121,13 +270,13 @@ def updatefinanceone(company_code):
                 finance_data_modify[j][i] = finance_data[i][j]
         finance_date = annual_date + quarter_date
 
-        con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
+        con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
         finance_date_count = 0
         division = 'annual'
         checkcount=0
         recent_bungi_check = 0
         for i in finance_data_modify:
-            selectsql = " select count(*) from finance where code = ? and index_date = ? and division =?; "
+            selectsql = " select count(*) from finance where code = %s and index_date = %s and division =%s; "
             cur = con.cursor()
             cur.execute(selectsql,(company_code,finance_date[finance_date_count],division,))
             rows = cur.fetchall()
@@ -149,7 +298,7 @@ def updatefinanceone(company_code):
             if checkcount < 1 :
                 # print("i is %s",company_code)
                 # print(i)
-                sql = ''' insert into finance values(null,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime')); '''
+                sql = ''' insert into finance values(nextval('finance_sequence'),%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,current_timestamp); '''
                 cur = con.cursor()
 
                 i_list=[]
@@ -195,12 +344,16 @@ def updatefinanceone(company_code):
             if finance_date_count >2:
                 division = 'quater'
             finance_date_count=finance_date_count+1
+        cur.close()
+        con.close()
     except IndexError :
-        con = sqlite3.connect("C:/Users/72027/PycharmProjects/webcroll/db.sqlite3")
-        updatesql = " update company set enable = 'N' where code = ? ; "
+        con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
+        updatesql = " update company set enable = 'N' where code = %s ; "
         cur = con.cursor()
         cur.execute(updatesql,(company_code,))
         cur.execute("commit;")
+        cur.close()
+        con.close()
     return HttpResponse('ok')
 
 def remove_letter(base_string,letter_remove):  # 문자열에서 선택된 특정 문자를 없애버리기
@@ -215,5 +368,7 @@ def remove_letter(base_string,letter_remove):  # 문자열에서 선택된 특�
         location+= 1
     # print("Result: %s",base_string)
     return base_string
+
+
 
 
