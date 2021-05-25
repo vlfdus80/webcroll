@@ -191,7 +191,7 @@ def t1305(단축코드='', 일주월구분='1', 날짜='', IDX='', 건수='900')
 
 def updateperiodprice(request):
     pythoncom.CoInitialize()
-    result, code, msg, 계좌, session = Login(url='hts.ebestsec.co.kr', port=200001, svrtype=0, id='vlfdus80', pwd='!a571132', cert='!!a5711327')
+    result, code, msg, 계좌, session = Login(url='hts.ebestsec.co.kr', port=200001, svrtype=0, id='XXX', pwd='XXX', cert='XXX')
 
     print("111")
     con = psycopg2.connect("dbname='webcrolldb' user='postgres' host='localhost' password='1111'")
