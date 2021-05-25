@@ -38,7 +38,7 @@ class XAQueryEvents:
 
 
 
-def Login(url='demo.ebestsec.co.kr', port=200001, svrtype=0, id='vlfdus80', pwd='!a571132', cert='!!a5711327'):
+def Login(url='demo.ebestsec.co.kr', port=200001, svrtype=0, id='XXX', pwd='XXX', cert='XXX'):
     session = win32com.client.DispatchWithEvents("XA_Session.XASession", XASessionEvents)
     session.SetMode("_XINGAPI7_", "TRUE")
     result = session.ConnectServer(url, port)
